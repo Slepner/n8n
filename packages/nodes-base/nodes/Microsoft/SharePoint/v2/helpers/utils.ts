@@ -1,9 +1,22 @@
-import type { INode } from 'n8n-workflow';
+import type { IDataObject, INode } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 
 /** v1's Simplify $select list — the exact trimmed fields v2 keeps returning; Get Many reuses it. */
 export const LIST_SIMPLIFY_SELECT =
 	'id,name,displayName,description,createdDateTime,lastModifiedDateTime,webUrl';
+
+/** v1's item Simplify request shape — trimming happens server-side, per item ticket parity. */
+export const ITEM_SIMPLIFY_SELECT = 'id,createdDateTime,lastModifiedDateTime,webUrl';
+export const ITEM_SIMPLIFY_EXPAND = 'fields(select=Title)';
+
+/** Match v1's simplifyItemPostReceive exactly: only these annotation keys are stripped. */
+export function simplifyItem(item: IDataObject): IDataObject {
+	delete item['@odata.context'];
+	delete item['@odata.etag'];
+	delete item['fields@odata.navigationLink'];
+	delete (item.fields as IDataObject | undefined)?.['@odata.etag'];
+	return item;
+}
 
 /** Shape shared by every Graph collection reply a listSearch method here consumes. */
 export type GraphSearchReply<T> = { '@odata.nextLink'?: string; value?: T[] };

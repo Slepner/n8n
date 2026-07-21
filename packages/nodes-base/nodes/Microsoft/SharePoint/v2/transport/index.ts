@@ -32,6 +32,10 @@ export const REQUIRED_PERMISSIONS: Readonly<
 		delegated: 'Sites.ReadWrite.All',
 		application: 'Sites.ReadWrite.All (or Sites.Selected granted with write access for this site)',
 	},
+	'item:getAll': {
+		delegated: 'Sites.Read.All',
+		application: 'Sites.Read.All (or Sites.Selected granted for this site)',
+	},
 	'list:get': {
 		delegated: 'Sites.Read.All',
 		application: 'Sites.Read.All (or Sites.Selected granted for this site)',
@@ -233,6 +237,7 @@ export async function microsoftApiRequestAllItems(
 	body: IDataObject = {},
 	qs: IDataObject = {},
 	limit?: number,
+	headers: IDataObject = {},
 ): Promise<IDataObject[]> {
 	const returnData: IDataObject[] = [];
 	let uri: string | undefined;
@@ -240,6 +245,7 @@ export async function microsoftApiRequestAllItems(
 	do {
 		// A next-page link is a complete address (already carries $select/$top/
 		// $skiptoken) — qs only applies to the first, endpoint-built request.
+		// Headers don't ride the link, so they are re-sent on every page.
 		const responseData = await microsoftApiRequest.call(
 			this,
 			method,
@@ -247,6 +253,7 @@ export async function microsoftApiRequestAllItems(
 			body,
 			uri ? {} : qs,
 			uri,
+			headers,
 		);
 		returnData.push.apply(
 			returnData,

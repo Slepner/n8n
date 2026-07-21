@@ -1,8 +1,9 @@
 import type { INodeProperties } from 'n8n-workflow';
 
 import * as create from './create.operation';
+import * as getAll from './getAll.operation';
 
-export { create };
+export { create, getAll };
 
 export const description: INodeProperties[] = [
 	{
@@ -22,9 +23,16 @@ export const description: INodeProperties[] = [
 				description: 'Create an item in an existing list',
 				action: 'Create item',
 			},
+			{
+				name: 'Get Many',
+				value: 'getAll',
+				description: 'Get specific items in a list or list many items',
+				action: 'Get many items',
+			},
 		],
-		default: 'create',
+		default: 'getAll',
 	},
 
 	...create.description,
+	...getAll.description,
 ];
