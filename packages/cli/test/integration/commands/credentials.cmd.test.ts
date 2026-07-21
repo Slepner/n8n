@@ -430,6 +430,9 @@ test('`import:credential --projectId ...` should fail if the credential already 
 });
 
 test('import:credentials should preserve the availability of existing instance credentials', async () => {
+	//
+	// ARRANGE
+	//
 	await createOwner();
 	await createCredentials({
 		id: '123',
@@ -438,13 +441,24 @@ test('import:credentials should preserve the availability of existing instance c
 		data: 'encrypted',
 		availability: 'instance',
 	});
-
+	//
+	// ACT
+	//
+	// The fixture carries no availability field for id 123.
 	await command.run(['--input=./test/integration/commands/import-credentials/credentials.json']);
 
-	await expect(getAllCredentials()).resolves.toEqual([
+	//
+	// ASSERT
+	//
+	const after = {
+		credentials: await getAllCredentials(),
+		sharings: await getAllSharedCredentials(),
+	};
+	expect(after.credentials).toEqual([
 		expect.objectContaining({ id: '123', availability: 'instance' }),
 	]);
-	await expect(getAllSharedCredentials()).resolves.toEqual([]);
+	// Still an instance credential, so no owner sharing may be created.
+	expect(after.sharings).toEqual([]);
 });
 
 test('import:credentials should reject changing an existing provider connection type', async () => {
