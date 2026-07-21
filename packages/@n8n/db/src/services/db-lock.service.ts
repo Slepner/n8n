@@ -5,6 +5,9 @@ import { DataSource, QueryFailedError } from '@n8n/typeorm';
 import type { EntityManager } from '@n8n/typeorm';
 import { OperationalError } from 'n8n-workflow';
 
+import type { OperationContext } from './transaction';
+import { TypeOrmTransaction } from './typeorm-transaction';
+
 /**
  * Centrally managed advisory lock IDs. Every Postgres advisory lock
  * used in the application MUST be registered here to prevent collisions.
@@ -13,6 +16,7 @@ export const enum DbLock {
 	AUTH_ROLES_SYNC = 1001,
 	TRUSTED_KEY_REFRESH = 1002,
 	WORKFLOW_STATISTICS_ROLLUP = 1003,
+	INSTANCE_AI_SETTINGS = 1004,
 	/** Reserved for integration tests — never use in production code */
 	TEST = 9999,
 }
@@ -130,6 +134,18 @@ export class DbLockService {
 			}
 			return await fn(tx);
 		});
+	}
+
+	async withLockContext<T>(
+		lockId: DbLock,
+		fn: (ctx: OperationContext) => Promise<T>,
+		options?: { timeoutMs?: number },
+	): Promise<T> {
+		return await this.withLock(
+			lockId,
+			async (manager) => await fn({ trx: new TypeOrmTransaction(manager) }),
+			options,
+		);
 	}
 
 	/**
