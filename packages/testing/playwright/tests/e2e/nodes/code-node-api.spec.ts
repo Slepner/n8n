@@ -2,7 +2,7 @@ import flatted from 'flatted';
 import type { IWorkflowBase } from 'n8n-workflow';
 import { nanoid } from 'nanoid';
 
-import { workflow, trigger, node } from '../../../../../@n8n/workflow-sdk/src';
+import { workflow, trigger, node } from '@n8n/workflow-sdk';
 import { test, expect } from '../../../fixtures/base';
 
 const TRIGGER_NAME = 'Manual Trigger';
