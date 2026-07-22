@@ -2,6 +2,11 @@
 #
 # - Uses docker-config.mjs for context determination, this determines what needs to be built based on the trigger
 # - Uses docker-tags.mjs for tag generation, this generates the tags for the images
+#
+# FORK MODIFICATIONS:
+# - Removed `schedule` trigger (no nightly builds needed on fork; would require DockerHub creds)
+# - Removed `notify-on-failure` job (references QBOT_SLACK_TOKEN the fork doesn't have)
+# - Push target is GHCR only (using the built-in GITHUB_TOKEN)
 
 name: 'Docker: Build and Push'
 
@@ -10,9 +15,6 @@ env:
   NODE_VERSION: '24.16.0'
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
-
   workflow_call:
     inputs:
       n8n_version:
@@ -35,7 +37,7 @@ on:
         type: string
         default: ''
       date_tag:
-        description: 'Optional date suffix for an extra <version>-<date> tag (e.g. 20260625)'
+        description: 'Optional date suffix for an extra - tag (e.g. 20260625)'
         required: false
         type: string
         default: ''
@@ -146,7 +148,7 @@ jobs:
 
           echo "=== Generated Docker Tags ==="
           cat "$GITHUB_OUTPUT" | grep "_tags=" | while IFS='=' read -r key value; do
-            echo "${key}: ${value%%,*}..."  # Show first tag for brevity
+            echo "${key}: ${value%%,*}..." # Show first tag for brevity
           done
 
       - name: Login to Docker registries
@@ -304,7 +306,7 @@ jobs:
 
           for image in "${!images[@]}"; do
             TAG_SUFFIX="${images[$image]}"
-            IMAGE_NAME="${image//-distroless/}"  # Remove -distroless from image name
+            IMAGE_NAME="${image//-distroless/}" # Remove -distroless from image name
 
             echo "Creating Docker Hub manifest for $image"
             docker buildx imagetools create \
@@ -327,7 +329,7 @@ jobs:
               "${DOCKER_BASE}/${IMAGE_NAME}:${SHA_SUFFIX}-arm64"
 
             # Create date-tagged manifest when a date suffix was provided (e.g. v3-nightly-20260625)
-            # Mirrors the SHA suffix placement: <version>-<date> and <version>-<date>-distroless
+            # Mirrors the SHA suffix placement: - and --distroless
             if [[ -n "$DATE_TAG" ]]; then
               if [[ "$image" == *"-distroless"* ]]; then
                 DATE_SUFFIX="${VERSION}-${DATE_TAG}-distroless"
@@ -566,21 +568,3 @@ jobs:
     with:
       image_ref: ${{ needs.build-and-push-docker.outputs.runners_primary_ghcr_manifest_tag }}
     secrets: inherit
-
-  notify-on-failure:
-    name: Notify Cats on nightly build failure
-    runs-on: ubuntu-latest
-    needs: [build-and-push-docker]
-    if: needs.build-and-push-docker.result == 'failure' && github.event_name == 'schedule'
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          sparse-checkout: .github/scripts/slack
-          sparse-checkout-cone-mode: false
-      - name: Notify Slack
-        env:
-          SLACK_TOKEN: ${{ secrets.QBOT_SLACK_TOKEN }}
-        run: |
-          node .github/scripts/slack/notify.mjs \
-            --channel '#team-catalysts' \
-            --text 'Nightly Docker build failed - ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
