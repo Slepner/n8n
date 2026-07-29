@@ -59,7 +59,7 @@ jobs:
 
       - name: Build n8n
         run: |
-          node scripts/build-n8n.mjs
+          pnpm run build:unchecked
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
