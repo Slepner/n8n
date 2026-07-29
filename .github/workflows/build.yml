@@ -38,8 +38,7 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
+        # version auto-detected from package.json's packageManager field
 
       - name: Get pnpm store directory
         shell: bash
