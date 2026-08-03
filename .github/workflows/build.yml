@@ -1,6 +1,15 @@
 # Builds and pushes n8n Docker image to GHCR from forked repo
-# Trigger: push to master + version tags (v*)
+# Trigger: push to master + version tags (v*) + manual dispatch
 # Target: ghcr.io/slepner/n8n:latest and ghcr.io/slepner/n8n:<tag>
+#
+# FIX (2026-08-03, t_f4cb3104): previous runs 1-3 failed because
+#  (a) `pnpm install --ignore-scripts` skipped sqlite3's native build, crashing
+#      @n8n/n8n-nodes-langchain#build:unchecked (copy-nodes-json.js requires sqlite3)
+#  (b) the workflow never produced ./compiled, which docker/images/n8n/Dockerfile
+#      `COPY ./compiled` requires (only scripts/build-n8n.mjs assembles it).
+# Now: plain `pnpm install --frozen-lockfile` (pnpm.onlyBuiltDependencies builds
+# sqlite3/isolated-vm/@vscode/ripgrep) + `node scripts/build-n8n.mjs` which does
+# install -> build:unchecked -> prune -> ./compiled, mirroring upstream CI.
 
 name: 'Build and Push n8n to GHCR'
 
@@ -14,6 +23,7 @@ on:
 
 env:
   NODE_VERSION: '24.18.0'
+  NODE_OPTIONS: '--max-old-space-size=7168'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -55,11 +65,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pnpm install --frozen-lockfile --ignore-scripts
+          pnpm install --frozen-lockfile
 
-      - name: Build n8n
+      - name: Build n8n and prepare compiled deployment
         run: |
-          pnpm run build:unchecked
+          node scripts/build-n8n.mjs
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
